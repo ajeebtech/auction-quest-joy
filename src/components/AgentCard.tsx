@@ -2,7 +2,7 @@
 import { Agent } from "@/types/Agent";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Brain } from "lucide-react";
+import { Coins, Brain, Shield } from "lucide-react";
 
 interface AgentCardProps {
   agent: Agent;
@@ -13,7 +13,10 @@ export const AgentCard = ({ agent, isCurrentBidder }: AgentCardProps) => {
   return (
     <Card className={`p-4 glass card-hover ${isCurrentBidder ? "ring-2 ring-primary" : ""}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-lg">{agent.displayName}</h3>
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5 opacity-70" />
+          <h3 className="font-semibold text-lg">{agent.displayName}</h3>
+        </div>
         <Badge
           variant={agent.status === "active" ? "default" : "secondary"}
           className="animate-fade-in"

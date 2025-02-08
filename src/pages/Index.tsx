@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Agent } from "@/types/Agent";
@@ -7,16 +6,18 @@ import { AuctionStatus } from "@/components/AuctionStatus";
 import { BidHistory } from "@/components/BidHistory";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Shield } from "lucide-react";
 
-const teamStrategies = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
+const teamNames = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RCB", "RR", "SRH"] as const;
+const modelTeams = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
 
 const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   name: `${i + 1}`,
-  displayName: `Team ${i + 1}`,
+  displayName: teamNames[i],
   budget: Math.floor(Math.random() * 1000000) + 500000,
   currentBid: null,
-  strategy: i < 6 ? teamStrategies[i] : "random",
+  strategy: i < 6 ? modelTeams[i] : "random",
   status: "waiting",
 }));
 
@@ -124,7 +125,7 @@ const Index = () => {
   if (!gameStarted) {
     return (
       <div className="container mx-auto py-8 px-4 min-h-screen">
-        <h1 className="text-4xl font-bold text-center mb-8 text-gradient">AI Auction House</h1>
+        <h1 className="text-4xl font-bold text-center mb-8 text-gradient">IPL Auction House</h1>
         <Card className="max-w-md mx-auto p-6 glass">
           <h2 className="text-2xl font-semibold mb-4">Select Your Team</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -132,9 +133,10 @@ const Index = () => {
               <Button
                 key={agent.id}
                 onClick={() => handleTeamSelect(agent.id)}
-                className="w-full h-24 text-lg font-semibold"
+                className="w-full h-24 text-lg font-semibold relative"
                 variant="outline"
               >
+                <Shield className="absolute top-2 right-2 w-4 h-4 opacity-50" />
                 {agent.displayName}
                 <span className="text-sm text-muted-foreground block">
                   {agent.strategy}
@@ -149,7 +151,7 @@ const Index = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 min-h-screen">
-      <h1 className="text-4xl font-bold text-center mb-8 text-gradient">AI Auction House</h1>
+      <h1 className="text-4xl font-bold text-center mb-8 text-gradient">IPL Auction House</h1>
       
       <div className="grid gap-8">
         <AuctionStatus
