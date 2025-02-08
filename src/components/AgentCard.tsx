@@ -13,7 +13,7 @@ export const AgentCard = ({ agent, isCurrentBidder }: AgentCardProps) => {
   return (
     <Card className={`p-4 glass card-hover ${isCurrentBidder ? "ring-2 ring-primary" : ""}`}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold text-lg">Agent {agent.name}</h3>
+        <h3 className="font-semibold text-lg">{agent.displayName}</h3>
         <Badge
           variant={agent.status === "active" ? "default" : "secondary"}
           className="animate-fade-in"
