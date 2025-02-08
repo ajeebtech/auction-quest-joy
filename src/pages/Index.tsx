@@ -8,13 +8,15 @@ import { BidHistory } from "@/components/BidHistory";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
+const teamStrategies = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
+
 const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   name: `${i + 1}`,
   displayName: `Team ${i + 1}`,
   budget: Math.floor(Math.random() * 1000000) + 500000,
   currentBid: null,
-  strategy: ["Aggressive", "Conservative", "Balanced"][Math.floor(Math.random() * 3)],
+  strategy: i < 6 ? teamStrategies[i] : "random",
   status: "waiting",
 }));
 
@@ -44,22 +46,27 @@ const Index = () => {
   useEffect(() => {
     if (!gameStarted) return;
 
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
       if (timeRemaining > 0) {
         setTimeRemaining((prev) => prev - 1);
         
-        // Sequential bidding logic
         const activeAgents = agents.filter((a) => a.status === "active");
-        if (activeAgents.length > 0 && timeRemaining % 3 === 0) { // Bid every 3 seconds
+        if (activeAgents.length > 0 && timeRemaining % 3 === 0) {
           const biddingAgent = activeAgents[currentBidderIndex % activeAgents.length];
           
-          // Skip the player's team in AI bidding
           if (biddingAgent.id === selectedTeam) {
             setCurrentBidderIndex(prev => prev + 1);
             return;
           }
 
-          const newBid = currentBid + Math.floor(Math.random() * 10000) + 5000;
+          // Prepare for model integration
+          let newBid = currentBid;
+          if (biddingAgent.strategy !== "random") {
+            // TODO: Call Supabase Edge Function to get model prediction
+            newBid = currentBid + Math.floor(Math.random() * 10000) + 5000; // Temporary random bid
+          } else {
+            newBid = currentBid + Math.floor(Math.random() * 10000) + 5000;
+          }
           
           if (newBid <= biddingAgent.budget) {
             setCurrentBid(newBid);
@@ -72,7 +79,7 @@ const Index = () => {
             
             toast({
               title: `New Bid!`,
-              description: `${biddingAgent.displayName} bids $${newBid.toLocaleString()}`,
+              description: `${biddingAgent.displayName} (${biddingAgent.strategy}) bids $${newBid.toLocaleString()}`,
             });
           }
           
@@ -129,6 +136,9 @@ const Index = () => {
                 variant="outline"
               >
                 {agent.displayName}
+                <span className="text-sm text-muted-foreground block">
+                  {agent.strategy}
+                </span>
               </Button>
             ))}
           </div>
