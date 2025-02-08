@@ -1,15 +1,32 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Agent } from "@/types/Agent";
+import { Player } from "@/types/Player";
 import { AgentCard } from "@/components/AgentCard";
 import { AuctionStatus } from "@/components/AuctionStatus";
 import { BidHistory } from "@/components/BidHistory";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Shield } from "lucide-react";
+import { Shield, User } from "lucide-react";
 
 const teamNames = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RCB", "RR", "SRH"] as const;
 const modelTeams = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
+
+// Placeholder player until you provide the Excel sheet
+const currentPlayer: Player = {
+  id: 1,
+  name: "Sample Player",
+  role: "All-rounder",
+  basePrice: 200000,
+  nationality: "India",
+  stats: {
+    matches: 50,
+    runs: 1200,
+    wickets: 30,
+    average: 28.5,
+  },
+};
 
 const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
@@ -26,7 +43,7 @@ const Index = () => {
   const [agents, setAgents] = useState<Agent[]>(initialAgents);
   const [currentRound, setCurrentRound] = useState(1);
   const [timeRemaining, setTimeRemaining] = useState(30);
-  const [currentBid, setCurrentBid] = useState(0);
+  const [currentBid, setCurrentBid] = useState(currentPlayer.basePrice);
   const [currentBidder, setCurrentBidder] = useState<number | null>(null);
   const [bids, setBids] = useState<{ agentId: number; amount: number; timestamp: Date; }[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
@@ -154,6 +171,40 @@ const Index = () => {
       <h1 className="text-4xl font-bold text-center mb-8 text-gradient">IPL Auction House</h1>
       
       <div className="grid gap-8">
+        <Card className="p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <User className="w-12 h-12" />
+            <div>
+              <h2 className="text-2xl font-bold">{currentPlayer.name}</h2>
+              <div className="flex gap-2 text-sm text-muted-foreground">
+                <span>{currentPlayer.role}</span>
+                <span>•</span>
+                <span>{currentPlayer.nationality}</span>
+              </div>
+            </div>
+          </div>
+          {currentPlayer.stats && (
+            <div className="grid grid-cols-4 gap-4 mt-2">
+              <div>
+                <span className="text-sm text-muted-foreground">Matches</span>
+                <p className="font-semibold">{currentPlayer.stats.matches}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Runs</span>
+                <p className="font-semibold">{currentPlayer.stats.runs}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Wickets</span>
+                <p className="font-semibold">{currentPlayer.stats.wickets}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Average</span>
+                <p className="font-semibold">{currentPlayer.stats.average}</p>
+              </div>
+            </div>
+          )}
+        </Card>
+
         <AuctionStatus
           currentRound={currentRound}
           totalRounds={5}
