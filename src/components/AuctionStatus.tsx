@@ -32,8 +32,7 @@ export const AuctionStatus = ({
           </h2>
           <Progress 
             value={progressValue} 
-            className="mt-2" 
-            indicatorClassName="transition-all"
+            className="mt-2"
           />
           <div className="flex justify-between text-sm text-muted-foreground mt-1">
             <span>0 Cr</span>
