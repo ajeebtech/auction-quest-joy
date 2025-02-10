@@ -25,7 +25,7 @@ export const AuctionStatus = ({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-muted-foreground">Current Bid</p>
-            <p className="text-2xl font-bold">${currentBid.toLocaleString()}</p>
+            <p className="text-2xl font-bold">₹{(currentBid/100000).toFixed(1)} Lakhs</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Time Remaining</p>

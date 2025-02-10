@@ -26,7 +26,7 @@ export const BidHistory = ({ bids }: BidHistoryProps) => {
               className="flex justify-between items-center text-sm animate-fade-in"
             >
               <span>Agent {bid.agentId}</span>
-              <span>${bid.amount.toLocaleString()}</span>
+              <span>₹{(bid.amount/100000).toFixed(1)} Lakhs</span>
               <span className="text-muted-foreground">
                 {bid.timestamp.toLocaleTimeString()}
               </span>

@@ -27,7 +27,7 @@ export const AgentCard = ({ agent, isCurrentBidder }: AgentCardProps) => {
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Coins className="w-4 h-4" />
-          <span>Budget: ${agent.budget.toLocaleString()}</span>
+          <span>Budget: ₹{(agent.budget/100000).toFixed(1)} Lakhs</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Brain className="w-4 h-4" />
@@ -35,7 +35,7 @@ export const AgentCard = ({ agent, isCurrentBidder }: AgentCardProps) => {
         </div>
         {agent.currentBid && (
           <div className="text-sm font-medium mt-2">
-            Current Bid: ${agent.currentBid.toLocaleString()}
+            Current Bid: ₹{(agent.currentBid/100000).toFixed(1)} Lakhs
           </div>
         )}
       </div>

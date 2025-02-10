@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Agent } from "@/types/Agent";
@@ -17,7 +16,7 @@ const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   name: `${i + 1}`,
   displayName: teamNames[i],
-  budget: Math.floor(Math.random() * 1000000) + 500000,
+  budget: Math.floor(Math.random() * 100000000) + 50000000, // Increased budget in rupees
   currentBid: null,
   strategy: i < 6 ? modelTeams[i] : "random",
   status: "waiting",
@@ -39,7 +38,6 @@ const Index = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
 
   useEffect(() => {
-    // Load players from JSON
     fetch('/src/data/players.json')
       .then(res => res.json())
       .then(data => {
@@ -86,9 +84,9 @@ const Index = () => {
 
           let newBid = currentBid;
           if (biddingAgent.strategy !== "random") {
-            newBid = currentBid + Math.floor(Math.random() * 10000) + 5000;
+            newBid = currentBid + 2000000; // 20 lakh increment
           } else {
-            newBid = currentBid + Math.floor(Math.random() * 10000) + 5000;
+            newBid = currentBid + 2000000; // 20 lakh increment
           }
           
           if (newBid <= biddingAgent.budget) {
@@ -102,14 +100,13 @@ const Index = () => {
             
             toast({
               title: `New Bid!`,
-              description: `${biddingAgent.displayName} (${biddingAgent.strategy}) bids $${newBid.toLocaleString()}`,
+              description: `${biddingAgent.displayName} (${biddingAgent.strategy}) bids ₹${(newBid/100000).toFixed(1)} Lakhs`,
             });
           }
           
           setCurrentBidderIndex(prev => prev + 1);
         }
       } else if (currentRound < 5) {
-        // Move to next player
         const nextPlayerIndex = currentPlayerIndex + 1;
         if (nextPlayerIndex < players.length) {
           setCurrentPlayerIndex(nextPlayerIndex);
@@ -139,7 +136,7 @@ const Index = () => {
     const playerAgent = agents.find(a => a.id === selectedTeam);
     if (!playerAgent || playerAgent.status !== "active") return;
 
-    const newBid = currentBid + Math.floor(Math.random() * 10000) + 5000;
+    const newBid = currentBid + 2000000; // 20 lakh increment
     if (newBid <= playerAgent.budget) {
       setCurrentBid(newBid);
       setCurrentBidder(playerAgent.id);
@@ -151,7 +148,7 @@ const Index = () => {
 
       toast({
         title: "Your Bid!",
-        description: `You bid $${newBid.toLocaleString()}`,
+        description: `You bid ₹${(newBid/100000).toFixed(1)} Lakhs`,
       });
     }
   };
@@ -258,4 +255,3 @@ const Index = () => {
 };
 
 export default Index;
-
