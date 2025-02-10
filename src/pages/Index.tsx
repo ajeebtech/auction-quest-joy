@@ -13,21 +13,6 @@ import { Shield, User } from "lucide-react";
 const teamNames = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RCB", "RR", "SRH"] as const;
 const modelTeams = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
 
-// Placeholder player until you provide the Excel sheet
-const currentPlayer: Player = {
-  id: 1,
-  name: "Sample Player",
-  role: "All-rounder",
-  basePrice: 200000,
-  nationality: "India",
-  stats: {
-    matches: 50,
-    runs: 1200,
-    wickets: 30,
-    average: 28.5,
-  },
-};
-
 const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   name: `${i + 1}`,
@@ -43,12 +28,34 @@ const Index = () => {
   const [agents, setAgents] = useState<Agent[]>(initialAgents);
   const [currentRound, setCurrentRound] = useState(1);
   const [timeRemaining, setTimeRemaining] = useState(30);
-  const [currentBid, setCurrentBid] = useState(currentPlayer.basePrice);
+  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+  const [currentBid, setCurrentBid] = useState(0);
   const [currentBidder, setCurrentBidder] = useState<number | null>(null);
   const [bids, setBids] = useState<{ agentId: number; amount: number; timestamp: Date; }[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [currentBidderIndex, setCurrentBidderIndex] = useState(0);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+
+  useEffect(() => {
+    // Load players from JSON
+    fetch('/src/data/players.json')
+      .then(res => res.json())
+      .then(data => {
+        setPlayers(data);
+        setCurrentPlayer(data[0]);
+        setCurrentBid(data[0].basePrice);
+      })
+      .catch(error => {
+        console.error('Error loading players:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load player data",
+          variant: "destructive",
+        });
+      });
+  }, []);
 
   const handleTeamSelect = (teamId: number) => {
     setSelectedTeam(teamId);
@@ -62,7 +69,7 @@ const Index = () => {
   };
 
   useEffect(() => {
-    if (!gameStarted) return;
+    if (!gameStarted || !currentPlayer) return;
 
     const timer = setInterval(async () => {
       if (timeRemaining > 0) {
@@ -77,11 +84,9 @@ const Index = () => {
             return;
           }
 
-          // Prepare for model integration
           let newBid = currentBid;
           if (biddingAgent.strategy !== "random") {
-            // TODO: Call Supabase Edge Function to get model prediction
-            newBid = currentBid + Math.floor(Math.random() * 10000) + 5000; // Temporary random bid
+            newBid = currentBid + Math.floor(Math.random() * 10000) + 5000;
           } else {
             newBid = currentBid + Math.floor(Math.random() * 10000) + 5000;
           }
@@ -104,19 +109,31 @@ const Index = () => {
           setCurrentBidderIndex(prev => prev + 1);
         }
       } else if (currentRound < 5) {
-        setCurrentRound((prev) => prev + 1);
-        setTimeRemaining(30);
-        setAgents((prev) =>
-          prev.map((agent) => ({
-            ...agent,
-            status: agent.budget > currentBid ? "active" : "out",
-          }))
-        );
+        // Move to next player
+        const nextPlayerIndex = currentPlayerIndex + 1;
+        if (nextPlayerIndex < players.length) {
+          setCurrentPlayerIndex(nextPlayerIndex);
+          setCurrentPlayer(players[nextPlayerIndex]);
+          setCurrentBid(players[nextPlayerIndex].basePrice);
+          setTimeRemaining(30);
+          setBids([]);
+          setCurrentBidder(null);
+          setCurrentBidderIndex(0);
+          setAgents((prev) =>
+            prev.map((agent) => ({
+              ...agent,
+              status: agent.budget > players[nextPlayerIndex].basePrice ? "active" : "out",
+            }))
+          );
+        } else {
+          setCurrentRound((prev) => prev + 1);
+          setTimeRemaining(30);
+        }
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, currentRound, agents, currentBid, gameStarted, currentBidderIndex, selectedTeam]);
+  }, [timeRemaining, currentRound, agents, currentBid, gameStarted, currentBidderIndex, selectedTeam, players, currentPlayerIndex, currentPlayer]);
 
   const handlePlayerBid = () => {
     const playerAgent = agents.find(a => a.id === selectedTeam);
@@ -170,7 +187,7 @@ const Index = () => {
     <div className="container mx-auto py-8 px-4 min-h-screen">
       <h1 className="text-4xl font-bold text-center mb-8 text-gradient">IPL Auction House</h1>
       
-      <div className="grid gap-8">
+      {currentPlayer && (
         <Card className="p-6">
           <div className="flex items-center gap-4 mb-4">
             <User className="w-12 h-12" />
@@ -204,40 +221,41 @@ const Index = () => {
             </div>
           )}
         </Card>
+      )}
 
-        <AuctionStatus
-          currentRound={currentRound}
-          totalRounds={5}
-          currentBid={currentBid}
-          timeRemaining={timeRemaining}
-        />
-        
-        {selectedTeam && (
-          <div className="flex justify-center gap-4">
-            <Button
-              onClick={handlePlayerBid}
-              disabled={agents.find(a => a.id === selectedTeam)?.status !== "active"}
-              className="w-48"
-            >
-              Place Bid
-            </Button>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {agents.map((agent) => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              isCurrentBidder={agent.id === currentBidder}
-            />
-          ))}
+      <AuctionStatus
+        currentRound={currentRound}
+        totalRounds={5}
+        currentBid={currentBid}
+        timeRemaining={timeRemaining}
+      />
+      
+      {selectedTeam && (
+        <div className="flex justify-center gap-4">
+          <Button
+            onClick={handlePlayerBid}
+            disabled={agents.find(a => a.id === selectedTeam)?.status !== "active"}
+            className="w-48"
+          >
+            Place Bid
+          </Button>
         </div>
-        
-        <BidHistory bids={bids} />
+      )}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {agents.map((agent) => (
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            isCurrentBidder={agent.id === currentBidder}
+          />
+        ))}
       </div>
+      
+      <BidHistory bids={bids} />
     </div>
   );
 };
 
 export default Index;
+
