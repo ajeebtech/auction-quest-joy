@@ -225,6 +225,7 @@ const Index = () => {
         totalRounds={5}
         currentBid={currentBid}
         timeRemaining={timeRemaining}
+        currentPlayer={currentPlayer}
       />
       
       {selectedTeam && (
