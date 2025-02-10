@@ -16,7 +16,7 @@ const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => ({
   id: i + 1,
   name: `${i + 1}`,
   displayName: teamNames[i],
-  budget: Math.floor(Math.random() * 100000000) + 50000000, // Increased budget in rupees
+  budget: Math.floor(Math.random() * 100000000) + 50000000,
   currentBid: null,
   strategy: i < 6 ? modelTeams[i] : "random",
   status: "waiting",
@@ -156,7 +156,7 @@ const Index = () => {
   if (!gameStarted) {
     return (
       <div className="container mx-auto py-8 px-4 min-h-screen">
-        <h1 className="text-4xl font-bold text-center mb-8 text-gradient">IPL Auction House</h1>
+        <h1 className="text-4xl font-bold text-center mb-8 text-gradient font-serif tracking-wider">IPL Auction</h1>
         <Card className="max-w-md mx-auto p-6 glass">
           <h2 className="text-2xl font-semibold mb-4">Select Your Team</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -182,7 +182,7 @@ const Index = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 min-h-screen">
-      <h1 className="text-4xl font-bold text-center mb-8 text-gradient">IPL Auction House</h1>
+      <h1 className="text-4xl font-bold text-center mb-8 text-gradient font-serif tracking-wider">IPL Auction</h1>
       
       {currentPlayer && (
         <Card className="p-6">
