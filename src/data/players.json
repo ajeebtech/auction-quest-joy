@@ -1,0 +1,68 @@
+
+[
+  {
+    "id": 1,
+    "name": "Rohit Sharma",
+    "role": "Batsman",
+    "basePrice": 20000000,
+    "nationality": "India",
+    "stats": {
+      "matches": 243,
+      "runs": 6211,
+      "wickets": 15,
+      "average": 30.5
+    }
+  },
+  {
+    "id": 2,
+    "name": "Virat Kohli",
+    "role": "Batsman",
+    "basePrice": 25000000,
+    "nationality": "India",
+    "stats": {
+      "matches": 237,
+      "runs": 7263,
+      "wickets": 4,
+      "average": 37.4
+    }
+  },
+  {
+    "id": 3,
+    "name": "MS Dhoni",
+    "role": "Wicket Keeper Batsman",
+    "basePrice": 18000000,
+    "nationality": "India",
+    "stats": {
+      "matches": 250,
+      "runs": 5082,
+      "wickets": 0,
+      "average": 38.1
+    }
+  },
+  {
+    "id": 4,
+    "name": "Jasprit Bumrah",
+    "role": "Bowler",
+    "basePrice": 15000000,
+    "nationality": "India",
+    "stats": {
+      "matches": 120,
+      "runs": 89,
+      "wickets": 145,
+      "average": 22.4
+    }
+  },
+  {
+    "id": 5,
+    "name": "Ravindra Jadeja",
+    "role": "All-rounder",
+    "basePrice": 16000000,
+    "nationality": "India",
+    "stats": {
+      "matches": 210,
+      "runs": 2658,
+      "wickets": 132,
+      "average": 31.2
+    }
+  }
+]
