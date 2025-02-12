@@ -8,6 +8,7 @@ import { BidHistory } from "@/components/BidHistory";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Shield, User } from "lucide-react";
+import { getAgentDecision, AgentState } from "@/utils/ddpgAgent";
 
 const teamNames = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RCB", "RR", "SRH"] as const;
 const modelTeams = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
@@ -36,6 +37,7 @@ const Index = () => {
   const [currentBidderIndex, setCurrentBidderIndex] = useState(0);
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
+  const [playerAnalysis, setPlayerAnalysis] = useState<any>(null); // Placeholder for player analysis
 
   useEffect(() => {
     fetch('/players.json')  // Updated path to fetch from public directory
@@ -84,9 +86,32 @@ const Index = () => {
 
           let newBid = currentBid;
           if (biddingAgent.strategy !== "random") {
-            newBid = currentBid + 2000000; // 20 lakh increment
+            // Use DDPG agent for decision making
+            const agentState: AgentState = {
+              matches: currentPlayer.stats.matches,
+              runs: currentPlayer.stats.runs,
+              wickets: currentPlayer.stats.wickets,
+              average: currentPlayer.stats.average,
+              basePrice: currentPlayer.basePrice,
+              currentBid: currentBid,
+              timeRemaining: timeRemaining,
+              role: currentPlayer.role
+            };
+
+            const shouldBid = getAgentDecision(
+              agentState,
+              biddingAgent.strategy,
+              biddingAgent.modelState // This would contain the loaded model weights
+            );
+
+            if (shouldBid) {
+              // Calculate bid increment based on agent's analysis
+              const maxBid = playerAnalysis ? playerAnalysis.recommendedMaxBid : currentBid + 2000000;
+              const bidIncrement = Math.min(2000000, maxBid - currentBid);
+              newBid = currentBid + bidIncrement;
+            }
           } else {
-            newBid = currentBid + 2000000; // 20 lakh increment
+            newBid = currentBid + 2000000; // Default increment for random strategy
           }
           
           if (newBid <= biddingAgent.budget) {
@@ -100,37 +125,43 @@ const Index = () => {
             
             toast({
               title: `New Bid!`,
-              description: `${biddingAgent.displayName} (${biddingAgent.strategy}) bids ₹${(newBid/100000).toFixed(1)} Lakhs`,
+              description: `${biddingAgent.displayName} bids ₹${(newBid/100000).toFixed(1)} Lakhs`,
             });
           }
           
           setCurrentBidderIndex(prev => prev + 1);
         }
-      } else if (currentRound < 5) {
-        const nextPlayerIndex = currentPlayerIndex + 1;
-        if (nextPlayerIndex < players.length) {
-          setCurrentPlayerIndex(nextPlayerIndex);
-          setCurrentPlayer(players[nextPlayerIndex]);
-          setCurrentBid(players[nextPlayerIndex].basePrice);
-          setTimeRemaining(30);
-          setBids([]);
-          setCurrentBidder(null);
-          setCurrentBidderIndex(0);
-          setAgents((prev) =>
-            prev.map((agent) => ({
-              ...agent,
-              status: agent.budget > players[nextPlayerIndex].basePrice ? "active" : "out",
-            }))
-          );
-        } else {
-          setCurrentRound((prev) => prev + 1);
-          setTimeRemaining(30);
-        }
+      } else {
+        moveToNextSet();
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, currentRound, agents, currentBid, gameStarted, currentBidderIndex, selectedTeam, players, currentPlayerIndex, currentPlayer]);
+  }, [timeRemaining, currentRound, agents, currentBid, gameStarted, currentBidderIndex, selectedTeam, playerAnalysis]);
+
+  const moveToNextSet = () => {
+    if (currentRound < 5) {
+      const nextPlayerIndex = currentPlayerIndex + 1;
+      if (nextPlayerIndex < players.length) {
+        setCurrentPlayerIndex(nextPlayerIndex);
+        setCurrentPlayer(players[nextPlayerIndex]);
+        setCurrentBid(players[nextPlayerIndex].basePrice);
+        setTimeRemaining(30);
+        setBids([]);
+        setCurrentBidder(null);
+        setCurrentBidderIndex(0);
+        setAgents((prev) =>
+          prev.map((agent) => ({
+            ...agent,
+            status: agent.budget > players[nextPlayerIndex].basePrice ? "active" : "out",
+          }))
+        );
+      } else {
+        setCurrentRound((prev) => prev + 1);
+        setTimeRemaining(30);
+      }
+    }
+  };
 
   const handlePlayerBid = () => {
     const playerAgent = agents.find(a => a.id === selectedTeam);
