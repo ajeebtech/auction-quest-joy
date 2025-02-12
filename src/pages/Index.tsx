@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Agent } from "@/types/Agent";
@@ -124,7 +123,6 @@ const Index = () => {
               role: currentPlayer.role
             };
 
-            // Load team data for analysis
             try {
               const response = await fetch(`/csvs/${biddingAgent.strategy}_dataset.csv`);
               const teamData = await response.text();
@@ -153,6 +151,7 @@ const Index = () => {
             setCurrentBidder(biddingAgent.id);
             setBids((prev) => [...prev, {
               agentId: biddingAgent.id,
+              teamName: biddingAgent.displayName,
               amount: newBid,
               timestamp: new Date(),
             }]);
@@ -166,18 +165,15 @@ const Index = () => {
           setCurrentBidderIndex(prev => prev + 1);
         }
       } else {
-        // If time runs out, award player to highest bidder
         if (currentBidder !== null) {
           const winningAgent = agents.find(a => a.id === currentBidder);
-          if (winningAgent) {
+          if (winningAgent && currentPlayer) {
             setAgents(prev => prev.map(agent => {
-              if (agent.id === currentBidder && currentPlayer) {
-                const updatedTeam = updateTeamAfterPurchase(
-                  agent.team,
-                  currentPlayer.role,
-                  currentPlayer.name,
-                  currentPlayer.nationality !== "India"
-                );
+              if (agent.id === currentBidder) {
+                const updatedTeam = {
+                  ...agent.team,
+                  ...updateTeamAfterPurchase(agent.team, currentPlayer.role, currentPlayer.name, currentPlayer.nationality !== "India")
+                };
                 return {
                   ...agent,
                   budget: agent.budget - currentBid,
@@ -228,12 +224,13 @@ const Index = () => {
     const playerAgent = agents.find(a => a.id === selectedTeam);
     if (!playerAgent || playerAgent.status !== "active") return;
 
-    const newBid = currentBid + 2000000; // 20 lakh increment
+    const newBid = currentBid + 2000000;
     if (newBid <= playerAgent.budget) {
       setCurrentBid(newBid);
       setCurrentBidder(playerAgent.id);
       setBids(prev => [...prev, {
         agentId: playerAgent.id,
+        teamName: playerAgent.displayName,
         amount: newBid,
         timestamp: new Date(),
       }]);

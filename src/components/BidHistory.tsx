@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 
 interface Bid {
   agentId: number;
+  teamName: string;
   amount: number;
   timestamp: Date;
 }
@@ -25,7 +26,7 @@ export const BidHistory = ({ bids }: BidHistoryProps) => {
               key={index}
               className="flex justify-between items-center text-sm animate-fade-in"
             >
-              <span>Agent {bid.agentId}</span>
+              <span>{bid.teamName}</span>
               <span>₹{(bid.amount/100000).toFixed(1)} Lakhs</span>
               <span className="text-muted-foreground">
                 {bid.timestamp.toLocaleTimeString()}
