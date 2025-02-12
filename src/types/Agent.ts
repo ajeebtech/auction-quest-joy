@@ -13,4 +13,12 @@ export interface Agent {
     target_actor_state: any;
     target_critic_state: any;
   };
+  team: {
+    bmen: number;
+    arounders: number;
+    bwlrs: number;
+    overseas: number;
+    wks: number;
+    squad: string[];
+  };
 }
