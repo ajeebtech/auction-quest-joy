@@ -53,20 +53,21 @@ const Index = () => {
   const { toast } = useToast();
   const [agents, setAgents] = useState<Agent[]>(initialAgents);
   const [currentRound, setCurrentRound] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState(30);
+  const [timeRemaining, setTimeRemaining] = useState(20);
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [currentBid, setCurrentBid] = useState(0);
   const [currentBidder, setCurrentBidder] = useState<number | null>(null);
-  const [bids, setBids] = useState<{ agentId: number; amount: number; timestamp: Date; }[]>([]);
+  const [bids, setBids] = useState<{ agentId: number; teamName: string; amount: number; timestamp: Date; }[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
   const [currentBidderIndex, setCurrentBidderIndex] = useState(0);
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
-  const [playerAnalysis, setPlayerAnalysis] = useState<any>(null); // Placeholder for player analysis
+  const [playerAnalysis, setPlayerAnalysis] = useState<any>(null);
+  const [waitingForPlayerDecision, setWaitingForPlayerDecision] = useState(false);
 
   useEffect(() => {
-    fetch('/players.json')  // Updated path to fetch from public directory
+    fetch('/players.json')
       .then(res => res.json())
       .then(data => {
         setPlayers(data);
@@ -102,11 +103,12 @@ const Index = () => {
         setTimeRemaining((prev) => prev - 1);
         
         const activeAgents = agents.filter((a) => a.status === "active");
-        if (activeAgents.length > 0 && timeRemaining % 3 === 0) {
+        if (activeAgents.length > 0 && timeRemaining % 3 === 0 && !waitingForPlayerDecision) {
           const biddingAgent = activeAgents[currentBidderIndex % activeAgents.length];
           
           if (biddingAgent.id === selectedTeam) {
-            setCurrentBidderIndex(prev => prev + 1);
+            setWaitingForPlayerDecision(true);
+            setTimeRemaining(20);
             return;
           }
 
@@ -165,7 +167,11 @@ const Index = () => {
           setCurrentBidderIndex(prev => prev + 1);
         }
       } else {
-        if (currentBidder !== null) {
+        if (waitingForPlayerDecision) {
+          setWaitingForPlayerDecision(false);
+          setCurrentBidderIndex(prev => prev + 1);
+          setTimeRemaining(30);
+        } else if (currentBidder !== null) {
           const winningAgent = agents.find(a => a.id === currentBidder);
           if (winningAgent && currentPlayer) {
             setAgents(prev => prev.map(agent => {
@@ -188,13 +194,13 @@ const Index = () => {
               description: `${currentPlayer?.name} goes to ${winningAgent.displayName} for ₹${(currentBid/100000).toFixed(1)} Lakhs`,
             });
           }
+          moveToNextSet();
         }
-        moveToNextSet();
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, currentRound, agents, currentBid, gameStarted, currentBidderIndex, selectedTeam, playerAnalysis]);
+  }, [timeRemaining, currentRound, agents, currentBid, gameStarted, currentBidderIndex, selectedTeam, playerAnalysis, waitingForPlayerDecision]);
 
   const moveToNextSet = () => {
     if (currentRound < 5) {
@@ -222,7 +228,7 @@ const Index = () => {
 
   const handlePlayerBid = () => {
     const playerAgent = agents.find(a => a.id === selectedTeam);
-    if (!playerAgent || playerAgent.status !== "active") return;
+    if (!playerAgent || playerAgent.status !== "active" || !waitingForPlayerDecision) return;
 
     const newBid = currentBid + 2000000;
     if (newBid <= playerAgent.budget) {
@@ -239,7 +245,23 @@ const Index = () => {
         title: "Your Bid!",
         description: `You bid ₹${(newBid/100000).toFixed(1)} Lakhs`,
       });
+      
+      setWaitingForPlayerDecision(false);
+      setTimeRemaining(30);
     }
+  };
+
+  const handlePassBid = () => {
+    if (!waitingForPlayerDecision) return;
+    
+    setWaitingForPlayerDecision(false);
+    setCurrentBidderIndex(prev => prev + 1);
+    setTimeRemaining(30);
+    
+    toast({
+      title: "Bid Passed",
+      description: "You passed on this bid",
+    });
   };
 
   if (!gameStarted) {
@@ -317,14 +339,21 @@ const Index = () => {
         currentPlayer={currentPlayer}
       />
       
-      {selectedTeam && (
-        <div className="flex justify-center gap-4">
+      {selectedTeam && waitingForPlayerDecision && (
+        <div className="flex justify-center gap-4 my-4">
           <Button
             onClick={handlePlayerBid}
             disabled={agents.find(a => a.id === selectedTeam)?.status !== "active"}
             className="w-48"
           >
             Place Bid
+          </Button>
+          <Button
+            onClick={handlePassBid}
+            variant="outline"
+            className="w-48"
+          >
+            Pass
           </Button>
         </div>
       )}
