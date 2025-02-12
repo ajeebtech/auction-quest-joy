@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Agent } from "@/types/Agent";
@@ -9,19 +10,41 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Shield, User } from "lucide-react";
 import { getAgentDecision, AgentState } from "@/utils/ddpgAgent";
+import { getTeamRequirements, canTeamBidOnPlayer, updateTeamAfterPurchase } from "@/services/teamService";
+import { initialTeams } from "@/types/Team";
 
 const teamNames = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RCB", "RR", "SRH"] as const;
 const modelTeams = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
 
-const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  name: `${i + 1}`,
-  displayName: teamNames[i],
-  budget: Math.floor(Math.random() * 100000000) + 50000000,
-  currentBid: null,
-  strategy: i < 6 ? modelTeams[i] : "random",
-  status: "waiting",
-}));
+const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => {
+  const teamName = modelTeams[i] || "random";
+  const teamData = initialTeams.find(t => t.name === teamName);
+  
+  return {
+    id: i + 1,
+    name: `${i + 1}`,
+    displayName: teamNames[i],
+    budget: teamData?.purse || Math.floor(Math.random() * 100000000) + 50000000,
+    currentBid: null,
+    strategy: i < 6 ? modelTeams[i] : "random",
+    status: "waiting",
+    team: teamData ? {
+      bmen: teamData.bmen,
+      arounders: teamData.arounders,
+      bwlrs: teamData.bwlrs,
+      overseas: teamData.overseas,
+      wks: teamData.wks,
+      squad: [...teamData.squad]
+    } : {
+      bmen: 2,
+      arounders: 2,
+      bwlrs: 2,
+      overseas: 2,
+      wks: 1,
+      squad: []
+    }
+  };
+});
 
 const Index = () => {
   const { toast } = useToast();
@@ -86,7 +109,6 @@ const Index = () => {
 
           let newBid = currentBid;
           if (biddingAgent.strategy !== "random") {
-            // Use DDPG agent for decision making
             const agentState: AgentState = {
               matches: currentPlayer.stats.matches,
               runs: currentPlayer.stats.runs,
@@ -98,20 +120,28 @@ const Index = () => {
               role: currentPlayer.role
             };
 
-            const shouldBid = getAgentDecision(
-              agentState,
-              biddingAgent.strategy,
-              biddingAgent.modelState // This would contain the loaded model weights
-            );
+            // Load team data for analysis
+            try {
+              const response = await fetch(`/csvs/${biddingAgent.strategy}_dataset.csv`);
+              const teamData = await response.text();
 
-            if (shouldBid) {
-              // Calculate bid increment based on agent's analysis
-              const maxBid = playerAnalysis ? playerAnalysis.recommendedMaxBid : currentBid + 2000000;
-              const bidIncrement = Math.min(2000000, maxBid - currentBid);
-              newBid = currentBid + bidIncrement;
+              const { shouldBid, suggestedAmount } = getAgentDecision(
+                agentState,
+                biddingAgent.strategy,
+                teamData,
+                currentPlayer,
+                biddingAgent.modelState
+              );
+
+              if (shouldBid && canTeamBidOnPlayer(biddingAgent.team, currentPlayer.role, currentPlayer.nationality !== "India")) {
+                newBid = Math.min(suggestedAmount, biddingAgent.budget);
+              }
+            } catch (error) {
+              console.error("Error loading team data:", error);
+              newBid = currentBid + 2000000;
             }
           } else {
-            newBid = currentBid + 2000000; // Default increment for random strategy
+            newBid = currentBid + 2000000;
           }
           
           if (newBid <= biddingAgent.budget) {
@@ -132,6 +162,33 @@ const Index = () => {
           setCurrentBidderIndex(prev => prev + 1);
         }
       } else {
+        // If time runs out, award player to highest bidder
+        if (currentBidder !== null) {
+          const winningAgent = agents.find(a => a.id === currentBidder);
+          if (winningAgent) {
+            setAgents(prev => prev.map(agent => {
+              if (agent.id === currentBidder && currentPlayer) {
+                const updatedTeam = updateTeamAfterPurchase(
+                  agent.team,
+                  currentPlayer.role,
+                  currentPlayer.name,
+                  currentPlayer.nationality !== "India"
+                );
+                return {
+                  ...agent,
+                  budget: agent.budget - currentBid,
+                  team: updatedTeam
+                };
+              }
+              return agent;
+            }));
+
+            toast({
+              title: "Player Sold!",
+              description: `${currentPlayer?.name} goes to ${winningAgent.displayName} for ₹${(currentBid/100000).toFixed(1)} Lakhs`,
+            });
+          }
+        }
         moveToNextSet();
       }
     }, 1000);
