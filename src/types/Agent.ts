@@ -14,6 +14,8 @@ export interface Agent {
     target_critic_state: any;
   };
   team: {
+    name?: string;
+    purse?: number;
     bmen: number;
     arounders: number;
     bwlrs: number;

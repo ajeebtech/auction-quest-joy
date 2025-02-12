@@ -7,10 +7,12 @@ export const getTeamRequirements = (teamName: string): Team | undefined => {
 };
 
 export const canTeamBidOnPlayer = (
-  team: Team,
+  team: Partial<Team>,
   playerRole: string,
   isOverseas: boolean
 ): boolean => {
+  if (!team) return false;
+  
   // Check if team can bid based on their requirements
   switch (playerRole) {
     case "Batsman":
@@ -30,27 +32,32 @@ export const canTeamBidOnPlayer = (
 };
 
 export const updateTeamAfterPurchase = (
-  team: Team,
+  team: Partial<Team>,
   playerRole: string,
   playerName: string,
   isOverseas: boolean
-): Team => {
-  const updatedTeam = { ...team };
+): Partial<Team> => {
+  if (!team) return team;
+  
+  const updatedTeam = { 
+    ...team,
+    squad: team.squad ? [...team.squad] : []
+  };
   
   // Update roster spots
   switch (playerRole) {
     case "Batsman":
-      updatedTeam.bmen--;
+      if (updatedTeam.bmen) updatedTeam.bmen--;
       break;
     case "AllRounder":
-      updatedTeam.arounders--;
+      if (updatedTeam.arounders) updatedTeam.arounders--;
       break;
     case "Bowler":
-      updatedTeam.bwlrs--;
+      if (updatedTeam.bwlrs) updatedTeam.bwlrs--;
       break;
   }
 
-  if (isOverseas) {
+  if (isOverseas && updatedTeam.overseas) {
     updatedTeam.overseas--;
   }
 

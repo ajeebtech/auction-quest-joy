@@ -29,6 +29,8 @@ const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => {
     strategy: i < 6 ? modelTeams[i] : "random",
     status: "waiting",
     team: teamData ? {
+      name: teamData.name,
+      purse: teamData.purse,
       bmen: teamData.bmen,
       arounders: teamData.arounders,
       bwlrs: teamData.bwlrs,
@@ -36,6 +38,8 @@ const initialAgents: Agent[] = Array.from({ length: 10 }, (_, i) => {
       wks: teamData.wks,
       squad: [...teamData.squad]
     } : {
+      name: teamNames[i].toLowerCase(),
+      purse: Math.floor(Math.random() * 100000000) + 50000000,
       bmen: 2,
       arounders: 2,
       bwlrs: 2,
