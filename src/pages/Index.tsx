@@ -38,7 +38,7 @@ const Index = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
 
   useEffect(() => {
-    fetch('/src/data/players.json')
+    fetch('/players.json')  // Updated path to fetch from public directory
       .then(res => res.json())
       .then(data => {
         setPlayers(data);

@@ -1,0 +1,73 @@
+
+[
+  {
+    "id": 1,
+    "name": "Mitchell Starc",
+    "role": "Bowler",
+    "basePrice": 20000000,
+    "nationality": "Australia",
+    "set": "Set 1",
+    "stats": {
+      "matches": 140,
+      "runs": 219,
+      "wickets": 193,
+      "average": 20.59
+    }
+  },
+  {
+    "id": 2,
+    "name": "Pat Cummins",
+    "role": "All-rounder",
+    "basePrice": 20000000,
+    "nationality": "Australia",
+    "set": "Set 1",
+    "stats": {
+      "matches": 157,
+      "runs": 1422,
+      "wickets": 183,
+      "average": 24.46
+    }
+  },
+  {
+    "id": 3,
+    "name": "Rovman Powell",
+    "role": "All-rounder",
+    "basePrice": 15000000,
+    "nationality": "West Indies",
+    "set": "Set 2",
+    "stats": {
+      "matches": 182,
+      "runs": 3542,
+      "wickets": 23,
+      "average": 27.12
+    }
+  },
+  {
+    "id": 4,
+    "name": "Gerald Coetzee",
+    "role": "Bowler",
+    "basePrice": 10000000,
+    "nationality": "South Africa",
+    "set": "Set 2",
+    "stats": {
+      "matches": 45,
+      "runs": 89,
+      "wickets": 67,
+      "average": 21.8
+    }
+  },
+  {
+    "id": 5,
+    "name": "Wanindu Hasaranga",
+    "role": "All-rounder",
+    "basePrice": 15000000,
+    "nationality": "Sri Lanka",
+    "set": "Set 3",
+    "stats": {
+      "matches": 175,
+      "runs": 1842,
+      "wickets": 258,
+      "average": 19.8
+    }
+  }
+]
