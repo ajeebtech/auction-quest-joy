@@ -11,6 +11,7 @@ import { Shield, User } from "lucide-react";
 import { getAgentDecision, AgentState } from "@/utils/ddpgAgent";
 import { getTeamRequirements, canTeamBidOnPlayer, updateTeamAfterPurchase } from "@/services/teamService";
 import { initialTeams } from "@/types/Team";
+import { SquadDisplay } from "@/components/SquadDisplay";
 
 const teamNames = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RCB", "RR", "SRH"] as const;
 const modelTeams = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
@@ -248,6 +249,7 @@ const Index = () => {
       
       setWaitingForPlayerDecision(false);
       setTimeRemaining(30);
+      setCurrentBidderIndex(prev => prev + 1);
     }
   };
 
@@ -294,6 +296,13 @@ const Index = () => {
   return (
     <div className="container mx-auto py-8 px-4 min-h-screen">
       <h1 className="text-4xl font-bold text-center mb-8 text-gradient font-serif tracking-wider">IPL Auction</h1>
+      
+      {selectedTeam && (
+        <SquadDisplay 
+          squad={agents.find(a => a.id === selectedTeam)?.team.squad || []}
+          teamName={agents.find(a => a.id === selectedTeam)?.displayName || ""}
+        />
+      )}
       
       {currentPlayer && (
         <Card className="p-6">
