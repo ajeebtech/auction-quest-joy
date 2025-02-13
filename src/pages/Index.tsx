@@ -130,7 +130,7 @@ const Index = () => {
               const response = await fetch(`/csvs/${biddingAgent.strategy}_dataset.csv`);
               const teamData = await response.text();
 
-              const { shouldBid, suggestedAmount } = getAgentDecision(
+              const decision = await getAgentDecision(
                 agentState,
                 biddingAgent.strategy,
                 teamData,
@@ -138,8 +138,8 @@ const Index = () => {
                 biddingAgent.modelState
               );
 
-              if (shouldBid && canTeamBidOnPlayer(biddingAgent.team, currentPlayer.role, currentPlayer.nationality !== "India")) {
-                newBid = Math.min(suggestedAmount, biddingAgent.budget);
+              if (decision.shouldBid && canTeamBidOnPlayer(biddingAgent.team, currentPlayer.role, currentPlayer.nationality !== "India")) {
+                newBid = Math.min(decision.suggestedAmount, biddingAgent.budget);
               }
             } catch (error) {
               console.error("Error loading team data:", error);

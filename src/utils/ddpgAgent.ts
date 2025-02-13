@@ -13,11 +13,16 @@ export interface AgentState {
 }
 
 interface ModelState {
-  actor: any;
-  critic: any;
-  targetActor: any;
-  targetCritic: any;
+  actor: Float32Array;
+  critic: Float32Array;
+  targetActor: Float32Array;
+  targetCritic: Float32Array;
 }
+
+// Implement our own sigmoid function since Math.sigmoid doesn't exist
+const sigmoid = (x: number): number => {
+  return 1 / (1 + Math.exp(-x));
+};
 
 export const calculateRelatabilityScore = (
   currentPlayer: any,
@@ -48,12 +53,28 @@ export const calculateBudget = (
   return predictedPrice + 10000000;
 };
 
-const loadModelWeights = async (team: string) => {
+const loadModelWeights = async (team: string): Promise<ModelState | null> => {
   try {
-    const actorResponse = await fetch(`/models/${team}/Actor_ddpg`);
-    const criticResponse = await fetch(`/models/${team}/Critic_ddpg`);
-    const targetActorResponse = await fetch(`/models/${team}/TargetActor_ddpg`);
-    const targetCriticResponse = await fetch(`/models/${team}/TargetCritic_ddpg`);
+    const actorResponse = await fetch(`/models/${team}/Actor_ddpg`, {
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      }
+    });
+    const criticResponse = await fetch(`/models/${team}/Critic_ddpg`, {
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      }
+    });
+    const targetActorResponse = await fetch(`/models/${team}/TargetActor_ddpg`, {
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      }
+    });
+    const targetCriticResponse = await fetch(`/models/${team}/TargetCritic_ddpg`, {
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      }
+    });
 
     if (!actorResponse.ok || !criticResponse.ok || !targetActorResponse.ok || !targetCriticResponse.ok) {
       throw new Error(`Failed to load model weights for team ${team}`);
@@ -76,9 +97,7 @@ const loadModelWeights = async (team: string) => {
   }
 };
 
-const predictUsingDDPG = (state: number[], weights: ModelState) => {
-  // This is a simplified version of the PyTorch forward pass
-  // In a real implementation, we would need to implement the full neural network forward pass
+const predictUsingDDPG = (state: number[], weights: ModelState): number => {
   const normalizedState = state.map(s => Math.max(0, Math.min(1, s))); // ReLU-like activation
   
   // Simple weighted sum as a placeholder for the actual neural network computation
@@ -86,7 +105,7 @@ const predictUsingDDPG = (state: number[], weights: ModelState) => {
     return sum + val * (weights.actor[idx] || 0);
   }, 0);
   
-  return Math.sigmoid(action); // Convert to probability between 0 and 1
+  return sigmoid(action); // Use our custom sigmoid function
 };
 
 function findClosestPlayer(teamData: string, currentPlayer: any) {
@@ -124,7 +143,7 @@ export const getAgentDecision = async (
   team: string,
   teamData: any,
   currentPlayer: any,
-  modelStates: any
+  modelStates: ModelState | null
 ): Promise<{ shouldBid: boolean; suggestedAmount: number }> => {
   // Normalize state values
   const normalizedState = {
