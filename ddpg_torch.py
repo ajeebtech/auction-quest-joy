@@ -62,7 +62,7 @@ class ReplayBuffer(object):
 
 class CriticNetwork(nn.Module):
     def __init__(self, beta, input_dims, fc1_dims, fc2_dims, n_actions, name,
-                 chkpt_dir='/Users/jatin/Documents/python/the big thing/models/srh'):
+                 chkpt_dir='/Users/jatin/Documents/python/the big thing/models/rcb'):
         super(CriticNetwork, self).__init__()
         self.input_dims = input_dims
         self.fc1_dims = fc1_dims
@@ -123,7 +123,7 @@ class CriticNetwork(nn.Module):
 
 class ActorNetwork(nn.Module):
     def __init__(self, alpha, input_dims, fc1_dims, fc2_dims,name, n_actions=2,
-                 chkpt_dir='/Users/jatin/Documents/python/the big thing/models/srh'):
+                 chkpt_dir='/Users/jatin/Documents/python/the big thing/models/rcb'):
         super(ActorNetwork, self).__init__()
         self.input_dims = input_dims
         self.fc1_dims = fc1_dims
