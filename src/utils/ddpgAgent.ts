@@ -12,14 +12,30 @@ export interface AgentState {
   role: string;
 }
 
+interface ModelState {
+  actor: any;
+  critic: any;
+  targetActor: any;
+  targetCritic: any;
+}
+
 export const calculateRelatabilityScore = (
   currentPlayer: any,
   targetPlayer: any,
   teamData: any
 ) => {
-  // Implement relatability_score from processing.py
-  const score = 0; // Will implement proper scoring
-  return score;
+  // Calculate Euclidean distance between player stats
+  const stats = ['matches', 'runs', 'wickets', 'average'];
+  let distance = 0;
+  
+  for (const stat of stats) {
+    if (currentPlayer.stats[stat] !== undefined && targetPlayer.stats[stat] !== undefined) {
+      const diff = currentPlayer.stats[stat] - targetPlayer.stats[stat];
+      distance += diff * diff;
+    }
+  }
+  
+  return Math.sqrt(distance);
 };
 
 export const calculateBudget = (
@@ -32,14 +48,85 @@ export const calculateBudget = (
   return predictedPrice + 10000000;
 };
 
-export const getAgentDecision = (
+const loadModelWeights = async (team: string) => {
+  try {
+    const actorResponse = await fetch(`/models/${team}/Actor_ddpg`);
+    const criticResponse = await fetch(`/models/${team}/Critic_ddpg`);
+    const targetActorResponse = await fetch(`/models/${team}/TargetActor_ddpg`);
+    const targetCriticResponse = await fetch(`/models/${team}/TargetCritic_ddpg`);
+
+    if (!actorResponse.ok || !criticResponse.ok || !targetActorResponse.ok || !targetCriticResponse.ok) {
+      throw new Error(`Failed to load model weights for team ${team}`);
+    }
+
+    const actorWeights = await actorResponse.arrayBuffer();
+    const criticWeights = await criticResponse.arrayBuffer();
+    const targetActorWeights = await targetActorResponse.arrayBuffer();
+    const targetCriticWeights = await targetCriticResponse.arrayBuffer();
+
+    return {
+      actor: new Float32Array(actorWeights),
+      critic: new Float32Array(criticWeights),
+      targetActor: new Float32Array(targetActorWeights),
+      targetCritic: new Float32Array(targetCriticWeights)
+    };
+  } catch (error) {
+    console.error("Error loading model weights:", error);
+    return null;
+  }
+};
+
+const predictUsingDDPG = (state: number[], weights: ModelState) => {
+  // This is a simplified version of the PyTorch forward pass
+  // In a real implementation, we would need to implement the full neural network forward pass
+  const normalizedState = state.map(s => Math.max(0, Math.min(1, s))); // ReLU-like activation
+  
+  // Simple weighted sum as a placeholder for the actual neural network computation
+  const action = normalizedState.reduce((sum, val, idx) => {
+    return sum + val * (weights.actor[idx] || 0);
+  }, 0);
+  
+  return Math.sigmoid(action); // Convert to probability between 0 and 1
+};
+
+function findClosestPlayer(teamData: string, currentPlayer: any) {
+  const rows = teamData.split('\n');
+  const headers = rows[0].split(',');
+  
+  let closestPlayer = null;
+  let minDistance = Infinity;
+  
+  for (let i = 1; i < rows.length; i++) {
+    const values = rows[i].split(',');
+    if (values.length !== headers.length) continue;
+    
+    const player = {
+      stats: {
+        matches: parseInt(values[headers.indexOf('matches')] || '0'),
+        runs: parseInt(values[headers.indexOf('runs')] || '0'),
+        wickets: parseInt(values[headers.indexOf('wickets')] || '0'),
+        average: parseFloat(values[headers.indexOf('average')] || '0'),
+      }
+    };
+    
+    const distance = calculateRelatabilityScore(currentPlayer, player, null);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestPlayer = player;
+    }
+  }
+  
+  return closestPlayer;
+}
+
+export const getAgentDecision = async (
   state: AgentState,
   team: string,
   teamData: any,
   currentPlayer: any,
   modelStates: any
-): { shouldBid: boolean; suggestedAmount: number } => {
-  // Normalize state values as in Python implementation
+): Promise<{ shouldBid: boolean; suggestedAmount: number }> => {
+  // Normalize state values
   const normalizedState = {
     matches: state.matches / 300,
     runs: state.runs / 10000,
@@ -52,22 +139,33 @@ export const getAgentDecision = (
   };
 
   try {
-    // Find closest player in team's dataset
+    // Load model weights if not already loaded
+    let weights = modelStates;
+    if (!weights) {
+      weights = await loadModelWeights(team.toLowerCase());
+      if (!weights) {
+        throw new Error("Failed to load model weights");
+      }
+    }
+
+    // Find closest player in team's dataset for comparison
     const closestPlayer = findClosestPlayer(teamData, currentPlayer);
     const relatabilityScore = calculateRelatabilityScore(currentPlayer, closestPlayer, teamData);
-    const predictedPrice = 5000000; // Will implement proper price prediction
-    const budget = calculateBudget(relatabilityScore, predictedPrice);
-
-    // Use DDPG agent to decide whether to bid
-    const bidThreshold = 0.7;
-    const shouldBid = 
-      (normalizedState.matches * 0.3 +
-       normalizedState.average * 0.3 +
-       normalizedState.timeRemaining * 0.4) > bidThreshold;
+    
+    // Convert normalized state to array for DDPG input
+    const stateArray = Object.values(normalizedState);
+    
+    // Get bidding decision from DDPG model
+    const bidProbability = predictUsingDDPG(stateArray, weights);
+    const shouldBid = bidProbability > 0.5;
+    
+    // Calculate suggested bid amount based on relatability and current price
+    const predictedPrice = state.currentBid * 1.1; // Simple price prediction
+    const suggestedAmount = calculateBudget(relatabilityScore, predictedPrice);
 
     return {
       shouldBid,
-      suggestedAmount: budget
+      suggestedAmount: Math.min(suggestedAmount, state.basePrice * 3) // Cap at 3x base price
     };
   } catch (error) {
     console.error("Error in agent decision making:", error);
@@ -77,8 +175,3 @@ export const getAgentDecision = (
     };
   }
 };
-
-function findClosestPlayer(teamData: any, currentPlayer: any) {
-  // Implement find_closest_player from processing.py
-  return null; // Will implement proper player finding
-}
