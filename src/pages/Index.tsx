@@ -260,6 +260,36 @@ const Index = () => {
     setCurrentBidderIndex(prev => prev + 1);
     setTimeRemaining(30);
     
+    const activeAgents = agents.filter(a => a.status === "active");
+    const remainingBidders = activeAgents.length;
+    
+    if (remainingBidders <= 1 && currentBidder !== null) {
+      const winningAgent = agents.find(a => a.id === currentBidder);
+      if (winningAgent && currentPlayer) {
+        setAgents(prev => prev.map(agent => {
+          if (agent.id === currentBidder) {
+            const updatedTeam = {
+              ...agent.team,
+              ...updateTeamAfterPurchase(agent.team, currentPlayer.role, currentPlayer.name, currentPlayer.nationality !== "India")
+            };
+            return {
+              ...agent,
+              budget: agent.budget - currentBid,
+              team: updatedTeam
+            };
+          }
+          return agent;
+        }));
+
+        toast({
+          title: "Player Sold!",
+          description: `${currentPlayer.name} goes to ${winningAgent.displayName} for ₹${(currentBid/100000).toFixed(1)} Lakhs`,
+        });
+        
+        moveToNextSet();
+      }
+    }
+    
     toast({
       title: "Bid Passed",
       description: "You passed on this bid",

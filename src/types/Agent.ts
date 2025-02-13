@@ -8,10 +8,10 @@ export interface Agent {
   strategy: "csk" | "dc" | "gt" | "kkr" | "lsg" | "mi" | "random";
   status: "active" | "waiting" | "out";
   modelState?: {
-    actor_state: any;
-    critic_state: any;
-    target_actor_state: any;
-    target_critic_state: any;
+    actor: Float32Array;
+    critic: Float32Array;
+    targetActor: Float32Array;
+    targetCritic: Float32Array;
   };
   team: {
     name?: string;
