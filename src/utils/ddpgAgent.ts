@@ -19,7 +19,6 @@ interface ModelState {
   targetCritic: Float32Array;
 }
 
-// Implement our own sigmoid function since Math.sigmoid doesn't exist
 const sigmoid = (x: number): number => {
   return 1 / (1 + Math.exp(-x));
 };
@@ -29,7 +28,6 @@ export const calculateRelatabilityScore = (
   targetPlayer: any,
   teamData: any
 ) => {
-  // Calculate Euclidean distance between player stats
   const stats = ['matches', 'runs', 'wickets', 'average'];
   let distance = 0;
   
@@ -55,41 +53,25 @@ export const calculateBudget = (
 
 const loadModelWeights = async (team: string): Promise<ModelState | null> => {
   try {
-    const actorResponse = await fetch(`/models/${team}/Actor_ddpg`, {
-      headers: {
-        'Content-Type': 'application/octet-stream'
-      }
-    });
-    const criticResponse = await fetch(`/models/${team}/Critic_ddpg`, {
-      headers: {
-        'Content-Type': 'application/octet-stream'
-      }
-    });
-    const targetActorResponse = await fetch(`/models/${team}/TargetActor_ddpg`, {
-      headers: {
-        'Content-Type': 'application/octet-stream'
-      }
-    });
-    const targetCriticResponse = await fetch(`/models/${team}/TargetCritic_ddpg`, {
-      headers: {
-        'Content-Type': 'application/octet-stream'
-      }
-    });
+    const actorResponse = await fetch(`http://localhost:5000/models/${team}/Actor_ddpg`);
+    const criticResponse = await fetch(`http://localhost:5000/models/${team}/Critic_ddpg`);
+    const targetActorResponse = await fetch(`http://localhost:5000/models/${team}/TargetActor_ddpg`);
+    const targetCriticResponse = await fetch(`http://localhost:5000/models/${team}/TargetCritic_ddpg`);
 
     if (!actorResponse.ok || !criticResponse.ok || !targetActorResponse.ok || !targetCriticResponse.ok) {
       throw new Error(`Failed to load model weights for team ${team}`);
     }
 
-    const actorWeights = await actorResponse.arrayBuffer();
-    const criticWeights = await criticResponse.arrayBuffer();
-    const targetActorWeights = await targetActorResponse.arrayBuffer();
-    const targetCriticWeights = await targetCriticResponse.arrayBuffer();
+    const actorData = await actorResponse.json();
+    const criticData = await criticResponse.json();
+    const targetActorData = await targetActorResponse.json();
+    const targetCriticData = await targetCriticResponse.json();
 
     return {
-      actor: new Float32Array(actorWeights),
-      critic: new Float32Array(criticWeights),
-      targetActor: new Float32Array(targetActorWeights),
-      targetCritic: new Float32Array(targetCriticWeights)
+      actor: new Float32Array(actorData.weights),
+      critic: new Float32Array(criticData.weights),
+      targetActor: new Float32Array(targetActorData.weights),
+      targetCritic: new Float32Array(targetCriticData.weights)
     };
   } catch (error) {
     console.error("Error loading model weights:", error);
@@ -98,14 +80,13 @@ const loadModelWeights = async (team: string): Promise<ModelState | null> => {
 };
 
 const predictUsingDDPG = (state: number[], weights: ModelState): number => {
-  const normalizedState = state.map(s => Math.max(0, Math.min(1, s))); // ReLU-like activation
+  const normalizedState = state.map(s => Math.max(0, Math.min(1, s))); 
   
-  // Simple weighted sum as a placeholder for the actual neural network computation
   const action = normalizedState.reduce((sum, val, idx) => {
     return sum + val * (weights.actor[idx] || 0);
   }, 0);
   
-  return sigmoid(action); // Use our custom sigmoid function
+  return sigmoid(action);
 };
 
 function findClosestPlayer(teamData: string, currentPlayer: any) {
@@ -145,7 +126,6 @@ export const getAgentDecision = async (
   currentPlayer: any,
   modelStates: ModelState | null
 ): Promise<{ shouldBid: boolean; suggestedAmount: number }> => {
-  // Normalize state values
   const normalizedState = {
     matches: state.matches / 300,
     runs: state.runs / 10000,
@@ -158,7 +138,6 @@ export const getAgentDecision = async (
   };
 
   try {
-    // Load model weights if not already loaded
     let weights = modelStates;
     if (!weights) {
       weights = await loadModelWeights(team.toLowerCase());
@@ -167,24 +146,19 @@ export const getAgentDecision = async (
       }
     }
 
-    // Find closest player in team's dataset for comparison
     const closestPlayer = findClosestPlayer(teamData, currentPlayer);
     const relatabilityScore = calculateRelatabilityScore(currentPlayer, closestPlayer, teamData);
     
-    // Convert normalized state to array for DDPG input
     const stateArray = Object.values(normalizedState);
-    
-    // Get bidding decision from DDPG model
     const bidProbability = predictUsingDDPG(stateArray, weights);
     const shouldBid = bidProbability > 0.5;
     
-    // Calculate suggested bid amount based on relatability and current price
-    const predictedPrice = state.currentBid * 1.1; // Simple price prediction
+    const predictedPrice = state.currentBid * 1.1;
     const suggestedAmount = calculateBudget(relatabilityScore, predictedPrice);
 
     return {
       shouldBid,
-      suggestedAmount: Math.min(suggestedAmount, state.basePrice * 3) // Cap at 3x base price
+      suggestedAmount: Math.min(suggestedAmount, state.basePrice * 3)
     };
   } catch (error) {
     console.error("Error in agent decision making:", error);
