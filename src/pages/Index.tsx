@@ -54,7 +54,7 @@ const Index = () => {
   const { toast } = useToast();
   const [agents, setAgents] = useState<Agent[]>(initialAgents);
   const [currentRound, setCurrentRound] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState(20);
+  const [timeRemaining, setTimeRemaining] = useState(15);
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [currentBid, setCurrentBid] = useState(0);
   const [currentBidder, setCurrentBidder] = useState<number | null>(null);
@@ -71,9 +71,10 @@ const Index = () => {
     fetch('/players.json')
       .then(res => res.json())
       .then(data => {
-        setPlayers(data);
-        setCurrentPlayer(data[0]);
-        setCurrentBid(data[0].basePrice);
+        const shuffledPlayers = [...data].sort(() => Math.random() - 0.5);
+        setPlayers(shuffledPlayers);
+        setCurrentPlayer(shuffledPlayers[0]);
+        setCurrentBid(shuffledPlayers[0].basePrice);
       })
       .catch(error => {
         console.error('Error loading players:', error);
@@ -104,12 +105,12 @@ const Index = () => {
         setTimeRemaining((prev) => prev - 1);
         
         const activeAgents = agents.filter((a) => a.status === "active");
-        if (activeAgents.length > 0 && timeRemaining % 3 === 0 && !waitingForPlayerDecision) {
+        if (activeAgents.length > 0 && timeRemaining % 2 === 0 && !waitingForPlayerDecision) {
           const biddingAgent = activeAgents[currentBidderIndex % activeAgents.length];
           
           if (biddingAgent.id === selectedTeam) {
             setWaitingForPlayerDecision(true);
-            setTimeRemaining(20);
+            setTimeRemaining(10);
             return;
           }
 
@@ -171,7 +172,7 @@ const Index = () => {
         if (waitingForPlayerDecision) {
           setWaitingForPlayerDecision(false);
           setCurrentBidderIndex(prev => prev + 1);
-          setTimeRemaining(30);
+          setTimeRemaining(15);
         } else if (currentBidder !== null) {
           const winningAgent = agents.find(a => a.id === currentBidder);
           if (winningAgent && currentPlayer) {
@@ -210,7 +211,7 @@ const Index = () => {
         setCurrentPlayerIndex(nextPlayerIndex);
         setCurrentPlayer(players[nextPlayerIndex]);
         setCurrentBid(players[nextPlayerIndex].basePrice);
-        setTimeRemaining(30);
+        setTimeRemaining(15);
         setBids([]);
         setCurrentBidder(null);
         setCurrentBidderIndex(0);
@@ -222,7 +223,7 @@ const Index = () => {
         );
       } else {
         setCurrentRound((prev) => prev + 1);
-        setTimeRemaining(30);
+        setTimeRemaining(15);
       }
     }
   };
@@ -248,7 +249,7 @@ const Index = () => {
       });
       
       setWaitingForPlayerDecision(false);
-      setTimeRemaining(30);
+      setTimeRemaining(15);
       setCurrentBidderIndex(prev => prev + 1);
     }
   };
@@ -258,7 +259,7 @@ const Index = () => {
     
     setWaitingForPlayerDecision(false);
     setCurrentBidderIndex(prev => prev + 1);
-    setTimeRemaining(30);
+    setTimeRemaining(15);
     
     const activeAgents = agents.filter(a => a.status === "active");
     const remainingBidders = activeAgents.length;
