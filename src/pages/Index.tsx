@@ -12,6 +12,8 @@ import { getAgentDecision, AgentState } from "@/utils/ddpgAgent";
 import { getTeamRequirements, canTeamBidOnPlayer, updateTeamAfterPurchase } from "@/services/teamService";
 import { initialTeams } from "@/types/Team";
 import { SquadDisplay } from "@/components/SquadDisplay";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Download, Users } from "lucide-react";
 
 const teamNames = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RCB", "RR", "SRH"] as const;
 const modelTeams = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
@@ -66,6 +68,7 @@ const Index = () => {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [playerAnalysis, setPlayerAnalysis] = useState<any>(null);
   const [waitingForPlayerDecision, setWaitingForPlayerDecision] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
 
   useEffect(() => {
     fetch('/players.json')
@@ -297,10 +300,51 @@ const Index = () => {
     });
   };
 
+  const handleExitAuction = () => {
+    setShowExitDialog(true);
+  };
+
+  const downloadTeamData = () => {
+    const selectedAgent = agents.find(a => a.id === selectedTeam);
+    if (!selectedAgent) return;
+
+    const teamData = {
+      teamName: selectedAgent.displayName,
+      remainingPurse: selectedAgent.budget,
+      squad: selectedAgent.team.squad,
+      timestamp: new Date().toLocaleString()
+    };
+
+    const blob = new Blob([JSON.stringify(teamData, null, 2)], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedAgent.displayName}_squad.json`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    toast({
+      title: "Team Exported!",
+      description: `Your ${selectedAgent.displayName} squad has been downloaded.`,
+    });
+  };
+
   if (!gameStarted) {
     return (
       <div className="container mx-auto py-8 px-4 min-h-screen">
-        <h1 className="text-4xl font-bold text-center mb-8 text-gradient font-serif tracking-wider">IPL Auction</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-center text-gradient font-serif tracking-wider">IPL Auction</h1>
+          <Button 
+            variant="outline" 
+            onClick={handleExitAuction}
+            className="flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Exit Auction
+          </Button>
+        </div>
         <Card className="max-w-md mx-auto p-6 glass">
           <h2 className="text-2xl font-semibold mb-4">Select Your Team</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -326,7 +370,17 @@ const Index = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 min-h-screen">
-      <h1 className="text-4xl font-bold text-center mb-8 text-gradient font-serif tracking-wider">IPL Auction</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-bold text-center text-gradient font-serif tracking-wider">IPL Auction</h1>
+        <Button 
+          variant="outline" 
+          onClick={handleExitAuction}
+          className="flex items-center gap-2"
+        >
+          <Users className="w-4 h-4" />
+          Exit Auction
+        </Button>
+      </div>
       
       {selectedTeam && (
         <SquadDisplay 
