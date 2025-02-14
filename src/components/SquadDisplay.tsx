@@ -15,13 +15,17 @@ export const SquadDisplay = ({ squad, teamName }: SquadDisplayProps) => {
         <Users className="w-4 h-4" />
         <h3 className="font-semibold">{teamName} Squad</h3>
       </div>
-      <ScrollArea className="h-[200px] p-4">
+      <ScrollArea className="h-[300px] p-4">
         <div className="space-y-2">
-          {squad.map((player, index) => (
-            <div key={index} className="text-sm">
-              {player}
-            </div>
-          ))}
+          {squad?.length > 0 ? (
+            squad.map((player, index) => (
+              <div key={index} className="text-sm bg-muted/50 p-2 rounded">
+                {player}
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-muted-foreground">No players in squad</div>
+          )}
         </div>
       </ScrollArea>
     </Card>
