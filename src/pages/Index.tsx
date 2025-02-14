@@ -7,13 +7,12 @@ import { AuctionStatus } from "@/components/AuctionStatus";
 import { BidHistory } from "@/components/BidHistory";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Shield, User } from "lucide-react";
+import { Shield, User, Users, Download } from "lucide-react";
 import { getAgentDecision, AgentState } from "@/utils/ddpgAgent";
 import { getTeamRequirements, canTeamBidOnPlayer, updateTeamAfterPurchase } from "@/services/teamService";
 import { initialTeams } from "@/types/Team";
 import { SquadDisplay } from "@/components/SquadDisplay";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Users } from "lucide-react";
 
 const teamNames = ["CSK", "DC", "GT", "KKR", "LSG", "MI", "PBKS", "RCB", "RR", "SRH"] as const;
 const modelTeams = ["csk", "dc", "gt", "kkr", "lsg", "mi"] as const;
@@ -69,24 +68,46 @@ const Index = () => {
   const [playerAnalysis, setPlayerAnalysis] = useState<any>(null);
   const [waitingForPlayerDecision, setWaitingForPlayerDecision] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  const [playerSets, setPlayerSets] = useState<{[key: string]: string[]}>({});
+  const [currentSet, setCurrentSet] = useState(1);
 
   useEffect(() => {
-    fetch('/players.json')
-      .then(res => res.json())
-      .then(data => {
-        const shuffledPlayers = [...data].sort(() => Math.random() - 0.5);
-        setPlayers(shuffledPlayers);
-        setCurrentPlayer(shuffledPlayers[0]);
-        setCurrentBid(shuffledPlayers[0].basePrice);
-      })
-      .catch(error => {
-        console.error('Error loading players:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load player data",
-          variant: "destructive",
-        });
+    Promise.all([
+      fetch('/auction2024list.csv').then(res => res.text()),
+      fetch('/players.json').then(res => res.json())
+    ]).then(([csvData, playersData]) => {
+      const rows = csvData.split('\n').slice(1);
+      const sets: {[key: string]: string[]} = {};
+      
+      rows.forEach(row => {
+        const [name, setNumber] = row.split(',');
+        const set = setNumber.trim();
+        if (!sets[set]) sets[set] = [];
+        sets[set].push(name.trim());
       });
+      
+      setPlayerSets(sets);
+      
+      const firstSetPlayers = sets['1'] || [];
+      const shuffledFirstSet = [...firstSetPlayers].sort(() => Math.random() - 0.5);
+      
+      const matchedPlayers = shuffledFirstSet
+        .map(name => playersData.find(p => p.name.toLowerCase() === name.toLowerCase()))
+        .filter(p => p);
+      
+      setPlayers(playersData);
+      setCurrentPlayer(matchedPlayers[0]);
+      if (matchedPlayers[0]) {
+        setCurrentBid(matchedPlayers[0].basePrice);
+      }
+    }).catch(error => {
+      console.error('Error loading data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load auction data",
+        variant: "destructive",
+      });
+    });
   }, []);
 
   const handleTeamSelect = (teamId: number) => {
@@ -98,6 +119,67 @@ const Index = () => {
         status: agent.budget > currentBid ? "active" : "out"
       }))
     );
+  };
+
+  const moveToNextSet = () => {
+    if (currentRound < 5) {
+      const currentSetPlayers = playerSets[currentSet.toString()] || [];
+      const remainingPlayers = currentSetPlayers.filter(name => 
+        !agents.some(agent => 
+          agent.team.squad.some(squadPlayer => 
+            squadPlayer.toLowerCase() === name.toLowerCase()
+          )
+        )
+      );
+
+      if (remainingPlayers.length > 0) {
+        const nextPlayer = remainingPlayers[Math.floor(Math.random() * remainingPlayers.length)];
+        const playerData = players.find(p => p.name.toLowerCase() === nextPlayer.toLowerCase());
+        
+        if (playerData) {
+          setCurrentPlayer(playerData);
+          setCurrentBid(playerData.basePrice);
+          setTimeRemaining(15);
+          setBids([]);
+          setCurrentBidder(null);
+          setCurrentBidderIndex(0);
+          setAgents((prev) =>
+            prev.map((agent) => ({
+              ...agent,
+              status: agent.budget > playerData.basePrice ? "active" : "out",
+            }))
+          );
+        }
+      } else {
+        const nextSet = currentSet + 1;
+        setCurrentSet(nextSet);
+        const nextSetPlayers = playerSets[nextSet.toString()] || [];
+        
+        if (nextSetPlayers.length > 0) {
+          const shuffledNextSet = [...nextSetPlayers].sort(() => Math.random() - 0.5);
+          const nextPlayer = players.find(p => 
+            p.name.toLowerCase() === shuffledNextSet[0].toLowerCase()
+          );
+          
+          if (nextPlayer) {
+            setCurrentPlayer(nextPlayer);
+            setCurrentBid(nextPlayer.basePrice);
+            setTimeRemaining(15);
+            setBids([]);
+            setCurrentBidder(null);
+            setCurrentBidderIndex(0);
+            setAgents((prev) =>
+              prev.map((agent) => ({
+                ...agent,
+                status: agent.budget > nextPlayer.basePrice ? "active" : "out",
+              }))
+            );
+          }
+        } else {
+          setCurrentRound((prev) => prev + 1);
+        }
+      }
+    }
   };
 
   useEffect(() => {
@@ -181,14 +263,15 @@ const Index = () => {
           if (winningAgent && currentPlayer) {
             setAgents(prev => prev.map(agent => {
               if (agent.id === currentBidder) {
-                const updatedTeam = {
-                  ...agent.team,
-                  ...updateTeamAfterPurchase(agent.team, currentPlayer.role, currentPlayer.name, currentPlayer.nationality !== "India")
-                };
+                const updatedTeam = updateTeamAfterPurchase(agent.team, currentPlayer.role, currentPlayer.name, currentPlayer.nationality !== "India");
                 return {
                   ...agent,
                   budget: agent.budget - currentBid,
-                  team: updatedTeam
+                  team: {
+                    ...agent.team,
+                    ...updatedTeam,
+                    squad: [...agent.team.squad, currentPlayer.name]
+                  }
                 };
               }
               return agent;
@@ -196,7 +279,7 @@ const Index = () => {
 
             toast({
               title: "Player Sold!",
-              description: `${currentPlayer?.name} goes to ${winningAgent.displayName} for ₹${(currentBid/100000).toFixed(1)} Lakhs`,
+              description: `${currentPlayer.name} goes to ${winningAgent.displayName} for ₹${(currentBid/100000).toFixed(1)} Lakhs`,
             });
           }
           moveToNextSet();
@@ -205,31 +288,7 @@ const Index = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeRemaining, currentRound, agents, currentBid, gameStarted, currentBidderIndex, selectedTeam, playerAnalysis, waitingForPlayerDecision]);
-
-  const moveToNextSet = () => {
-    if (currentRound < 5) {
-      const nextPlayerIndex = currentPlayerIndex + 1;
-      if (nextPlayerIndex < players.length) {
-        setCurrentPlayerIndex(nextPlayerIndex);
-        setCurrentPlayer(players[nextPlayerIndex]);
-        setCurrentBid(players[nextPlayerIndex].basePrice);
-        setTimeRemaining(15);
-        setBids([]);
-        setCurrentBidder(null);
-        setCurrentBidderIndex(0);
-        setAgents((prev) =>
-          prev.map((agent) => ({
-            ...agent,
-            status: agent.budget > players[nextPlayerIndex].basePrice ? "active" : "out",
-          }))
-        );
-      } else {
-        setCurrentRound((prev) => prev + 1);
-        setTimeRemaining(15);
-      }
-    }
-  };
+  }, [timeRemaining, currentRound, agents, currentBid, gameStarted, currentBidderIndex, selectedTeam, waitingForPlayerDecision]);
 
   const handlePlayerBid = () => {
     const playerAgent = agents.find(a => a.id === selectedTeam);
@@ -372,14 +431,16 @@ const Index = () => {
     <div className="container mx-auto py-8 px-4 min-h-screen">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold text-center text-gradient font-serif tracking-wider">IPL Auction</h1>
-        <Button 
-          variant="outline" 
-          onClick={handleExitAuction}
-          className="flex items-center gap-2"
-        >
-          <Users className="w-4 h-4" />
-          Exit Auction
-        </Button>
+        {gameStarted && (
+          <Button 
+            variant="outline" 
+            onClick={handleExitAuction}
+            className="flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Exit Auction
+          </Button>
+        )}
       </div>
       
       {selectedTeam && (
